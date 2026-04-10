@@ -1,0 +1,137 @@
+#include "../includes/struct.h"
+#include <ctype.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+void init_liste_char(struct liste *L) {
+  L->tete = NIL;
+  L->nbmots = 0;
+}
+
+void ajout_liste(struct liste *L, char c[100]) {
+  struct maillon *M;
+  int i = 0;
+  int len = strlen(c);
+  while (len > 0 && !isalnum(c[0])) {
+    memmove(c, c + 1, len); // Décalage des caractères vers la gauche
+    len--;
+  }
+  while (len > 0 && !isalnum(c[len - 1])) {
+    c[len - 1] =
+        '\0'; // Remplacer le dernier caractère spécial par un caractère nul
+    len--;
+  }
+  while (c[i] != '\0') {
+    c[i] = tolower(c[i]);
+    i++;
+  }
+
+  FILE *fichier_mot_vide;
+  fichier_mot_vide = fopen("fichier_texte/liste_mot_vide.txt",
+                           "r"); // Ouvre le fichier en mode écriture ("w")
+
+  if (fichier_mot_vide != NULL) { // Vérification que le fichier existe
+    char mot_vide[100];
+    while (fscanf(fichier_mot_vide, "%99s", mot_vide) != EOF) {
+      if (strcmp(mot_vide, c) ==
+          0) { // Si le mot est dans la liste des mots vides
+        fclose(fichier_mot_vide);
+        return; // Ne rien faire et quitter la fonction
+      }
+    }
+    fclose(fichier_mot_vide);
+  }
+
+  if (L->nbmots == 0) {
+    struct maillon *new;
+    new = (struct maillon *)malloc(sizeof(struct maillon));
+    strcpy(new->mot, c);
+    new->freq = 1;
+    new->suivant = NIL;
+    L->tete = new;
+    L->nbmots = L->nbmots + 1;
+  } else {
+    M = L->tete;
+    int i = 0;
+    bool trouve = false;
+    while (i < L->nbmots && trouve == false) {
+      if (strcmp(M->mot, c) == 0) {
+        trouve = true;
+        M->freq = M->freq + 1;
+      }
+      if (M->suivant != NIL) {
+        M = M->suivant;
+      }
+      i = i + 1;
+    }
+    if (trouve == false) {
+      struct maillon *new;
+      new = (struct maillon *)malloc(sizeof(struct maillon));
+      strcpy(new->mot, c);
+      new->freq = 1;
+      new->suivant = NIL;
+      M->suivant = new;
+      L->nbmots = L->nbmots + 1;
+    }
+  }
+}
+
+
+void tri_occ(struct liste *liste_chainee, char *tableau_tri[], int *freq_tri) {
+  struct maillon *courant = liste_chainee->tete;
+
+  // Initialisation du tableau trié
+  int taille_tableau = liste_chainee->nbmots;
+  for (int i = 0; i < taille_tableau; i++) {
+    tableau_tri[i] =
+        malloc(sizeof(char) * 100); // Allocate memory for each word
+    strcpy(tableau_tri[i], "");     // Initialize with empty string
+    freq_tri[i] = 0;
+  }
+
+  // Parcours de la liste pour copier les mots et les fréquences dans le tableau
+  int index = 0;
+  while (courant != NULL) {
+    strcpy(tableau_tri[index], courant->mot);
+    freq_tri[index] = courant->freq;
+    courant = courant->suivant;
+    index++;
+  }
+
+  // Tri du tableau (utilisation d'un simple tri à bulles)
+  for (int i = 0; i < taille_tableau - 1; i++) {
+    for (int j = 0; j < taille_tableau - i - 1; j++) {
+      // Compare frequencies first
+      if (freq_tri[j] < freq_tri[j + 1] ||
+          (freq_tri[j] == freq_tri[j + 1] &&
+           strcmp(tableau_tri[j], tableau_tri[j + 1]) > 0)) {
+        // Swap words
+        char temp_mot[100]; // Temporary storage for word
+        strcpy(temp_mot, tableau_tri[j]);
+        strcpy(tableau_tri[j], tableau_tri[j + 1]);
+        strcpy(tableau_tri[j + 1], temp_mot);
+
+        // Swap frequencies
+        int temp_freq = freq_tri[j];
+        freq_tri[j] = freq_tri[j + 1];
+        freq_tri[j + 1] = temp_freq;
+      }
+    }
+  }
+}
+
+void clear_liste(struct liste *L) {
+  struct maillon *courant;
+  struct maillon *suivant;
+  int i;
+
+  courant = L->tete;
+  for (i = 0; i < L->nbmots; i++) {
+    suivant = courant->suivant;
+
+    free(courant);
+    courant = suivant;
+  }
+}
